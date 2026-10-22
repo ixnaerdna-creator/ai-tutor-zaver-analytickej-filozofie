@@ -168,15 +168,15 @@ def api_error(exc:Exception,model:str)->str:
     code=getattr(exc,'code',None)
     message=str(exc).lower()
     if code==429 or '429' in message or 'resource_exhausted' in message:
-        return f'Gemini (429): Nedostupná alebo vyčerpaná kvóta pre {model}. Otázka sa nezapočítala.'
+        return f'OpenAI (429): Nedostupná alebo vyčerpaná kvóta pre {model}. Otázka sa nezapočítala.'
     if code==503 or '503' in message or 'unavailable' in message:
-        return 'Gemini (503) je momentálne nedostupné. Otázku možno bezpečne zopakovať.'
+        return 'OpenAI (503) je momentálne nedostupné. Otázku možno bezpečne zopakovať.'
     if code==404 or '404' in message or 'not_found' in message:
-        return f'Model {model} sa nenašiel (404). Overte GEMINI_MODEL a dostupnosť v AI Studio.'
+        return f'Model {model} sa nenašiel (404). Overte OPENAI_MODEL a dostupnosť v AI Studio.'
     if code in (401,403) or '401' in message or '403' in message:
-        return 'Gemini odmietlo prístup (401/403). Skontrolujte API kľúč a projekt.'
+        return 'OpenAI odmietlo prístup (401/403). Skontrolujte API kľúč a projekt.'
     if any(s in message for s in ['timeout','timed out','deadline exceeded']):
-        return 'Gemini neodpovedalo v časovom limite. Otázka sa nezapočítala; možno ju zopakovať.'
+        return 'OpenAI neodpovedalo v časovom limite. Otázka sa nezapočítala; možno ju zopakovať.'
     return f'Volanie modelu sa nepodarilo dokončiť ({type(exc).__name__}). Pozrite serverové logy.'
 
 

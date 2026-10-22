@@ -1,3 +1,38 @@
+# Verzia s OpenAI API
+
+Táto verzia **používa OpenAI Responses API namiesto Gemini**. Čítačka, lokálne JSON
+texty, vyhľadávanie, výklad kliknutého odseku a 20-krokový sokratovský dialóg
+sú zachované. Do API sa prenášajú iba relevantné výňatky a kontext spracúvanej
+požiadavky, nie celý JSON automaticky. Model nemá pripojené vyhľadávanie na webe.
+
+## Rýchle nasadenie
+
+1. Nahrajte obsah *tohto* priečinka na GitHub (všetky súbory z projektu,
+   vrátane `openai_backend.py`, `requirements.txt` a súborov JSON).
+2. V Streamlit Community Cloud otvorte existujúcu aplikáciu, prípadne vytvorte
+   novú, a nastavte správny repozitár, vetvu `main`/`master` a hlavný súbor `app.py`.
+3. V **App settings → Secrets** zadajte (skutočný kľúč nikdy nevkladajte na GitHub):
+
+```toml
+OPENAI_API_KEY = "sk-..."
+OPENAI_MODEL = "gpt-6.1-sol"
+OPENAI_REASONING_EFFORT = "low"
+OPENAI_TIMEOUT_MS = 120000
+```
+
+Pre lacnejšiu prevádzku môžete vybrať `gpt-6-luna`, pre náročnejšie diskusie
+`gpt-6.1-sol` a úsilie `medium` alebo `high`. Model musí byť dostupný
+v danom projekte OpenAI API. Predplatné ChatGPT sa za API neúčtuje;
+OpenAI API má vlastné fakturovanie podľa spotreby.
+
+Kľúč vytvoríte na https://platform.openai.com/api-keys
+Cenník: https://platform.openai.com/pricing
+
+**Pozor na autorské práva k plným textom a prekladom**, ak má byť GitHub
+repozitár verejný.
+
+---
+
 # AI tútor – Záver: Súčasnosť a budúcnosť analytickej filozofie
 
 Samostatná aplikácia **Streamlit + Google Gemini** pre predmet *Súčasná filozofia 2 – Analytická filozofia*.
@@ -51,15 +86,15 @@ pip install -r requirements.txt
 3. Uložte nastavenia do `.streamlit/secrets.toml` (podľa dodaného príkladu), napr.:
 
 ```toml
-GEMINI_API_KEY = "VLOZTE_SVOJ_SKUTOCNY_KLUC"
-GEMINI_MODEL = "gemini-3.5-flash-lite"
-GEMINI_TIMEOUT_MS = 120000
+OPENAI_API_KEY = "VLOZTE_SVOJ_SKUTOCNY_KLUC"
+OPENAI_MODEL = "gpt-6.1-sol"
+OPENAI_TIMEOUT_MS = 120000
 ```
 
 4. Spustite `streamlit run app.py`. Ak kľúč nezadáte, čítanie a vyhľadávanie
    zostanú dostupné; výklad a dialóg budú vypnuté.
 
-Model nastavte na model dostupný vo vašom projekte Google AI Studio.
+Model nastavte na model dostupný vo vašom projekte OpenAI API.
 Pri chybe 404 overte názov, pri 429 kvótu a limity.
 
 ## GitHub + Streamlit Community Cloud
@@ -86,7 +121,7 @@ python tests/test_reader_browser.py
 
 Pre testy prehliadača potrebujete lokálne Chromium (`/usr/bin/chromium`) alebo
 upravte cestu v `tests/test_reader_browser.py` podľa svojho prostredia.
-Živé Gemini API volania nie sú súčasťou testov – vyžadujú funkčný kľúč a kvótu.
+Živé OpenAI API volania nie sú súčasťou testov – vyžadujú funkčný kľúč a kvótu.
 
 ## Technické poznámky
 

@@ -13,8 +13,7 @@ from time import perf_counter
 from uuid import uuid4
 
 import streamlit as st
-from google import genai
-from google.genai import types
+from openai_backend import make_client as make_openai_client, generate_content
 
 from book_reader import book_reader
 from tutor_core import (
@@ -40,9 +39,10 @@ def secret(name: str, default=None):
     except Exception: return os.environ.get(name,default)
 
 
-API_KEY=str(secret('GEMINI_API_KEY','') or '').strip()
-MODEL=str(secret('GEMINI_MODEL','gemini-3.5-flash-lite')).strip()
-try: TIMEOUT_MS=max(30000,min(240000,int(secret('GEMINI_TIMEOUT_MS',120000))))
+API_KEY=str(secret('OPENAI_API_KEY','') or '').strip()
+MODEL=str(secret('OPENAI_MODEL','gpt-6-luna')).strip()
+THINKING=str(secret('OPENAI_REASONING_EFFORT','medium') or 'medium').strip().lower()
+try: TIMEOUT_MS=max(30000,min(240000,int(secret('OPENAI_TIMEOUT_MS',120000))))
 except (ValueError,TypeError): TIMEOUT_MS=120000
 
 
@@ -70,8 +70,7 @@ def get_index(path:str,digest:str):
 
 @st.cache_resource(show_spinner=False)
 def get_client(key:str,timeout_ms:int):
-    return genai.Client(api_key=key,http_options=types.HttpOptions(
-        timeout=timeout_ms,retry_options=types.HttpRetryOptions(attempts=1)))
+    return make_openai_client(key, timeout_ms)
 
 
 INDEX=get_index(str(CORPUS_FILE),DIGEST)
@@ -124,19 +123,16 @@ práca s dôkazmi a otvorené otázky. Už nepolož ďalšiu otázku.
 Ak niektorá časť predchádzajúcich vstupov nie je dostupná, výslovne uveď obmedzenie.'''
 
 
-def ask_gemini(system:str,prompt:str,final:bool=False)->str:
-    if CLIENT is None: raise RuntimeError('Chýba GEMINI_API_KEY.')
+def ask_openai(system:str,prompt:str,final:bool=False)->str:
+    if CLIENT is None: raise RuntimeError('Chýba OPENAI_API_KEY.')
     started=perf_counter()
     try:
-        result=CLIENT.models.generate_content(model=MODEL,contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system,temperature=0.25,
-                max_output_tokens=4200 if final else 2600))
+        result=generate_content(CLIENT, model=MODEL, contents=prompt, system=system, max_output_tokens=6500 if final else 4000, reasoning_effort=THINKING)
         text=(result.text or '').strip()
         if not text:raise RuntimeError('Model vrátil prázdnu odpoveď.')
         return text
     finally:
-        LOGGER.info('Gemini: model=%s time=%.1fs chars=%d',MODEL,perf_counter()-started,len(prompt))
+        LOGGER.info('OpenAI: model=%s time=%.1fs chars=%d',MODEL,perf_counter()-started,len(prompt))
 
 
 def defaults():
@@ -188,18 +184,18 @@ def open_result(identifier:str):
 
 
 @st.cache_data(show_spinner=False,ttl=604800,max_entries=1500)
-def cached_explanation(identifier:str,digest:str,model:str,key_digest:str):
+def cached_explanation(identifier:str,digest:str,model:str,key_digest:str,effort:str):
     row=ROW_MAP[identifier]
     ctx=evidence(INDEX,row['text'][:2300]+' '+row['work_title'],
        work_ids={row['work_id']},focus_id=identifier,limit=10,char_budget=15500)
     prompt='KLIKNUTÝ ZÁZNAM:\n['+source_label(row)+']\n'+row['text']+'\n\nSÚVISIACE PASÁŽE:\n'+ctx
-    return ask_gemini(EXPLANATION_SYSTEM,prompt)
+    return ask_openai(EXPLANATION_SYSTEM,prompt)
 
 
 def explain(identifier:str):
     try:
         with st.spinner('Pripravujem výklad odseku…'):
-            answer=cached_explanation(identifier,DIGEST,MODEL,KEY_DIGEST)
+            answer=cached_explanation(identifier,DIGEST,MODEL,KEY_DIGEST,THINKING)
     except Exception as e:
         LOGGER.exception('Výklad sa nepodaril: %s',identifier)
         st.session_state.show_explanation=False
@@ -230,7 +226,7 @@ def process_pending():
             f'NOVÝ VSTUP ŠTUDENTA ({st.session_state.count+1}/{MAX_TURNS}):\n{q}\n\n{instruction}')
     try:
         with st.spinner('Pripravujem sokratovskú odpoveď…'):
-            answer=ask_gemini(DIALOGUE_SYSTEM,prompt,final=finished)
+            answer=ask_openai(DIALOGUE_SYSTEM,prompt,final=finished)
     except Exception as e:
         LOGGER.exception('Zlyhala odpoveď na diskusnú otázku')
         st.session_state.pending_failed=True
@@ -263,7 +259,7 @@ def main():
     st.title('Záver – Súčasnosť a budúcnosť analytickej filozofie')
     st.caption('10 autorov · 10 textov · nezávislý výklad odsekov · 20-krokový sokratovský dialóg')
     if CLIENT is None:
-        st.warning('Nie je nastavený GEMINI_API_KEY. Čítačka a vyhľadávanie fungujú aj bez neho; AI výklad a diskusia nie.')
+        st.warning('Nie je nastavený OPENAI_API_KEY. Čítačka a vyhľadávanie fungujú aj bez neho; AI výklad a diskusia nie.')
 
     c1,c2=st.columns([1,3],gap='medium')
     with c1:
